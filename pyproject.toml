@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "mcconverge"
+version = "0.1.0"
+description = "):A Python package for Monte Carlo simulation and uncertainty quantification of cost-based investment decisions using the Net Present Value method."
+authors = ["Aditya Harish Nair"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
