@@ -198,3 +198,98 @@ def plot_input_vs_output(result: SimulationResult, input_name: str) -> plt.Figur
     ax.set_title(f"'{input_name}' vs Output", fontsize=14)
     fig.tight_layout()
     return fig
+
+def plot_simulation_input(result: SimulationResult, input_name: str) -> plt.Figure:
+    """
+    Plot the actual input samples used in the Monte Carlo simulation
+    as a histogram with KDE overlay.
+
+    Parameters
+    ----------
+    result : SimulationResult
+        Result object from MonteCarloSimulator.run().
+    input_name : str
+        Name of the input variable to plot.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    from scipy.stats import gaussian_kde
+
+    if input_name not in result.inputs:
+        raise ValueError(
+            f"'{input_name}' not found in simulation inputs. "
+            f"Available: {list(result.inputs.keys())}"
+        )
+
+    samples = result.inputs[input_name]
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.hist(samples, bins=50, density=True,
+            color="steelblue", alpha=0.6, edgecolor="white", label="Simulation samples")
+
+    kde = gaussian_kde(samples)
+    x = np.linspace(samples.min(), samples.max(), 300)
+    ax.plot(x, kde(x), color="darkblue", linewidth=2, label="KDE")
+
+    ax.axvline(samples.mean(), color="black", linestyle="--",
+               linewidth=1.5, label=f"Mean: {samples.mean():.4f}")
+
+    ax.set_title(f"Actual simulation input: '{input_name}'", fontsize=14)
+    ax.set_xlabel(input_name, fontsize=12)
+    ax.set_ylabel("Density", fontsize=12)
+    ax.legend()
+    fig.tight_layout()
+    return fig
+
+
+def plot_cost_breakdown(result: SimulationResult, model, title: str = "Cost Breakdown") -> plt.Figure:
+    """
+    Plot the average discounted cost contribution of each cost component
+    as a horizontal bar chart.
+
+    Parameters
+    ----------
+    result : SimulationResult
+        Result object from MonteCarloSimulator.run().
+    model : NPVModel
+        The NPV model containing the cost components.
+    title : str
+        Plot title.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    contributions = {}
+
+    for component in model._costs:
+        # Compute average discounted cost over all years and all samples
+        total = 0.0
+        for t in range(model.horizon_years):
+            # Use mean of each input sample for the average cost
+            mean_samples = {name: float(np.mean(arr)) for name, arr in result.inputs.items()}
+            total += component.annual_cost(t, mean_samples) / (1 + model.discount_rate) ** t
+        contributions[component.name] = total
+
+    total_cost = sum(contributions.values())
+    percentages = {k: (v / total_cost) * 100 for k, v in contributions.items()}
+
+    # Sort by contribution size
+    sorted_items = sorted(percentages.items(), key=lambda x: x[1])
+    names  = [item[0] for item in sorted_items]
+    values = [item[1] for item in sorted_items]
+
+    fig, ax = plt.subplots(figsize=(8, max(4, len(names) * 0.6)))
+    bars = ax.barh(names, values, color="steelblue", alpha=0.7, edgecolor="white")
+
+    for bar, val in zip(bars, values):
+        ax.text(val + 0.5, bar.get_y() + bar.get_height() / 2,
+                f"{val:.1f}%", va="center", fontsize=10)
+
+    ax.set_xlim(0, 110)
+    ax.set_xlabel("Share of total discounted cost (%)", fontsize=12)
+    ax.set_title(title, fontsize=14)
+    fig.tight_layout()
+    return fig
