@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mcconverge.simulator import SimulationResult, ConvergenceResult
+from scipy.stats import gaussian_kde
 
 def plot_output_distribution(
     result: SimulationResult,
@@ -215,8 +216,6 @@ def plot_simulation_input(result: SimulationResult, input_name: str) -> plt.Figu
     -------
     matplotlib.figure.Figure
     """
-    from scipy.stats import gaussian_kde
-
     if input_name not in result.inputs:
         raise ValueError(
             f"'{input_name}' not found in simulation inputs. "
